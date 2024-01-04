@@ -1,0 +1,69 @@
+diff -Naur --no-dereference a/arch/x86/kvm/vmx/vmx.c b/arch/x86/kvm/vmx/vmx.c
+--- a/arch/x86/kvm/vmx/vmx.c	2023-07-16 13:35:27.636285995 +0000
++++ b/arch/x86/kvm/vmx/vmx.c	2023-07-17 04:17:04.184273928 +0000
+@@ -6017,6 +6017,36 @@
+ 	return 1;
+ }
+ 
++static int handle_rdtsc(struct kvm_vcpu *vcpu) 
++{ 
++	u64 _rdtsc = rdtsc();
++	printk_once("[HookEntry] hook entry function handle_rdtsc is working, return the rdtsc() if no hook , you can hook here!\n");
++	vcpu->arch.regs[VCPU_REGS_RAX] = _rdtsc & -1u;
++	vcpu->arch.regs[VCPU_REGS_RDX] = (_rdtsc >> 32) & -1u;  
++	return kvm_skip_emulated_instruction(vcpu);
++}
++
++static int handle_rdtscp(struct kvm_vcpu *vcpu) 
++{ 
++	u64 _rdtsc = rdtsc();
++	printk_once("[HookEntry] hook entry function handle_rdtscp is working, return the rdtsc() if no hook , you can hook here!\n");
++	vcpu->arch.regs[VCPU_REGS_RAX] = _rdtsc & -1u;
++	vcpu->arch.regs[VCPU_REGS_RDX] = (_rdtsc >> 32) & -1u;  
++	return kvm_skip_emulated_instruction(vcpu);
++}
++
++static int handle_umwait(struct kvm_vcpu *vcpu)
++{
++	kvm_skip_emulated_instruction(vcpu);
++	return 1;
++}
++
++static int handle_tpause(struct kvm_vcpu *vcpu)
++{
++	kvm_skip_emulated_instruction(vcpu);
++	return 1;
++}
++
+ /*
+  * The exit handlers return 1 if the exit was handled fully and guest execution
+  * may resume.  Otherwise they set the kvm_run parameter to indicate what needs
+@@ -6075,6 +6105,10 @@
+ 	[EXIT_REASON_ENCLS]		      = handle_encls,
+ 	[EXIT_REASON_BUS_LOCK]                = handle_bus_lock_vmexit,
+ 	[EXIT_REASON_NOTIFY]		      = handle_notify,
++	[EXIT_REASON_RDTSC]			= handle_rdtsc,
++	[EXIT_REASON_RDTSCP]		= handle_rdtscp,
++	[EXIT_REASON_UMWAIT]                  = handle_umwait,
++	[EXIT_REASON_TPAUSE]                  = handle_tpause,
+ };
+ 
+ static const int kvm_vmx_max_exit_handlers =
+@@ -8650,3 +8684,16 @@
+ 	return r;
+ }
+ module_init(vmx_init);
++
++void set_vmx_exec_control(struct kvm_vcpu *vcpu,u32 control){
++	struct vcpu_vmx *vmx = to_vmx(vcpu);
++	exec_controls_set(vmx, control);
++}
++
++u32 get_vmx_exec_control(struct kvm_vcpu *vcpu){
++	struct vcpu_vmx *vmx = to_vmx(vcpu);
++	return exec_controls_get(vmx);
++}
++
++EXPORT_SYMBOL_GPL(set_vmx_exec_control);
++EXPORT_SYMBOL_GPL(get_vmx_exec_control);
+\ No newline at end of file
